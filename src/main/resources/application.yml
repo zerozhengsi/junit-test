@@ -1,0 +1,75 @@
+# ???????
+server:
+  port: 10001
+
+# ????
+logging:
+  # ??????
+  level:
+    # ???info
+    root: info
+    # vteam??debug
+    com.vteam: debug
+  # ??????
+  file:
+    name:  E:/data/logs/unit.log
+
+# Spring??
+spring:
+  main:
+    # ??????????
+    allow-bean-definition-overriding: true
+    # ????????
+    allow-circular-references: true
+  # ?????
+  datasource:
+    name: nfms
+    url: jdbc:mysql://localhost:3306/test?useSSL=false&characterEncoding=utf8
+    username: root
+    password: mysqltest
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # ??????
+      connection-timeout: 3000
+      # ?????
+      minimum-idle: 1
+      # ?????
+      maximum-pool-size: 2
+      # ????
+      auto-commit: true
+      # ??????
+      idle-timeout: 60000
+      # ??????
+      max-lifetime: 28740000
+      # ????SQL
+      connection-test-query: SELECT 1 FROM DUAL
+
+
+# mybatis
+mybatis-plus:
+  mapperLocations: classpath*:/mappers/**/*Mapper.xml
+  # ???????package?????????
+  typeAliasesPackage: com.vteam.unit.entity.model
+  global-config:
+    # ??mapper ????
+    refresh: true
+    # ???????
+    db-config:
+      # ???????
+      column-underline: true
+      # ?????????3????
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      # ????
+      id-type: input
+      # ????
+      field-strategy: not_empty
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    jdbc-type-for-null: 'null'
+    # ??????
+    #log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # ???????
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl

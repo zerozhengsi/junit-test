@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vteam.unit.entity.mapper.SipaRolMMapper">
+
+    <select id="validOrgRoleName" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM SIPA_ROL_M
+        WHERE DEL_FLAG = '0'
+          AND ROLE_NAME = #{roleName}
+          AND ORG_REFCODE = #{orgRefcode}
+    </select>
+
+    <select id="validOrgRoleNameInUpdate" resultType="java.lang.Integer">
+        SELECT COUNT(1) FROM SIPA_ROL_M
+        WHERE DEL_FLAG = '0'
+          AND ROLE_NAME = #{roleName}
+          AND ORG_REFCODE = #{orgRefcode}
+          AND REFCODE &lt;&gt; #{refcode}
+    </select>
+
+    <!-- 运营端 获取角色列表根据条件 -->
+    <select id="listRoleInfoByCondition" resultType="com.vteam.unit.entity.vo.SipaRolMVo">
+        SELECT ROL.*,COALESCE(BTRCNT.CNT,0) ROL_USER_COUNT
+        FROM SIPA_ROL_M ROL
+        LEFT JOIN (
+        SELECT COUNT(1) CNT,BTR.ROLEID FROM SIPA_BTR_M BTR
+        GROUP BY BTR.ROLEID
+        ) BTRCNT ON BTRCNT.ROLEID = ROL.ROLEID
+        WHERE ROL.DEL_FLAG = '0'
+        AND (
+        (
+        ROL.SYSTEM_TYPE = '1'
+        <if test=" null != parentRoleid and '' != parentRoleid">
+            AND (ROL.ROLEID = #{parentRoleid} OR ROL.PARENT_ROLEID = #{parentRoleid})
+        </if>
+        ) OR (
+        ROL.SYSTEM_TYPE = '2'
+        <if test="brandStyle != null and brandStyle != '' and 'B'.toString == brandStyle">
+            AND ROL.ROLEID IN ('company_admin','financial_admin','partner_admin')
+        </if>
+        <if test="brandStyle == null or brandStyle == '' or 'B'.toString != brandStyle">
+            AND ROL.ROLEID IN ('company_admin','core_company_admin','financial_admin','partner_admin')
+        </if>
+        )
+        )
+        <if test=" null != roleName and '' != roleName">
+            AND ROL.ROLE_NAME LIKE CONCAT('%',#{roleName},'%')
+        </if>
+        <if test=" null != roleType and '' != roleType and '11'.toString == roleType ">
+            AND ROL.SYSTEM_TYPE = '1' <!-- 运营角色  -->
+        </if>
+        <if test=" null != roleType and '' != roleType and '21'.toString == roleType ">
+            AND ROL.SYSTEM_TYPE = '2' <!-- 企业角色  -->
+            <if test="brandStyle != null and brandStyle != '' and 'B'.toString == brandStyle">
+                AND ROL.ROLEID = 'company_admin'
+            </if>
+            <if test="brandStyle == null or brandStyle == '' or 'B'.toString != brandStyle">
+                AND ROL.ROLEID IN ('company_admin','core_company_admin')
+            </if>
+        </if>
+        <if test=" null != roleType and '' != roleType and '22'.toString == roleType ">
+            AND ROL.SYSTEM_TYPE = '2' <!-- 机构角色  -->
+            AND ROL.ROLEID = 'financial_admin'
+        </if>
+        <if test=" null != roleType and '' != roleType and '23'.toString == roleType ">
+            AND ROL.SYSTEM_TYPE ='2' <!-- 合伙人角色  -->
+            AND ROL.ROLEID = 'partner_admin'
+        </if>
+        ORDER BY ROL.CREATE_DATE DESC
+    </select>
+
+
+    <!-- 根据用户信息获取角色列表 -->
+    <select id="listRoleInfoByUserInfo" resultType="com.vteam.unit.entity.vo.SipaRolMVo">
+        SELECT ROL.ROLEID
+        FROM sipa_rol_m ROL
+        INNER JOIN sipa_btr_m BTR ON BTR.ROLEID = ROL.ROLEID AND BTR.USERID = #{userid}
+        AND BTR.ORG_REFCODE = #{orgRefcode}
+        <if test=" null != roleType and '' != roleType">
+            WHERE ROL.ROLE_TYPE = #{roleType}
+        </if>
+    </select>
+
+    <!-- 根据审批流节点ID获取角色列表 -->
+    <select id="listByFlowNodeRefcode" resultType="com.vteam.unit.entity.vo.SipaRolMVo">
+      SELECT
+        ROL.refcode, ROL.system_type, ROL.roleid, ROL.role_name, ROL.roledesc, ROL.scpid, ROL.parent_roleid, ROL.org_refcode, ROL.use_flag
+       FROM sipa_rol_m ROL
+      INNER JOIN flow_relation_node_role RNR ON RNR.ROLE_ID = ROL.ROLEID
+      INNER JOIN flow_node NODE ON RNR.NODE_REFCODE = NODE.REFCODE AND NODE.REFCODE = #{nodeRefcode}
+      WHERE ROL.DEL_FLAG = '0' AND ROL.USE_FLAG = '1'
+    </select>
+
+    <!-- 根据用户Id获取角色信息 -->
+    <select id="getRoleInfoByUserId" resultType="com.vteam.unit.entity.vo.SipaRolMVo">
+        SELECT ROL.ROLEID
+        FROM sipa_rol_m ROL
+        INNER JOIN sipa_btr_m BTR ON BTR.ROLEID = ROL.ROLEID AND BTR.USERID = #{userid}
+    </select>
+
+</mapper>

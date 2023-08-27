@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vteam.unit.entity.mapper.SipaRtfMMapper">
+
+    <select id="listFunRefcodesByRoleInfo" resultType="java.lang.Integer">
+        SELECT FUN.REFCODE FROM CSPA_FUN_M FUN
+        <!-- 仅查询是否在使用为[1=是]的数据 -->
+        WHERE FUN.USE_FLAG = '1'
+        AND FUN.FUNID IN (
+        SELECT RTF.FUNID FROM SIPA_RTF_M RTF
+        WHERE RTF.ROLEID = #{roleid}
+        )
+        <if test="brandStyle != null and brandStyle != ''">
+            AND FUN.SCPID LIKE CONCAT('%',#{brandStyle},'%')
+        </if>
+        <if test="roleType != null and roleType != ''">
+            AND FUN.SYSTEM_TYPE = #{roleType}
+        </if>
+        ORDER  BY FUN.REFCODE DESC
+    </select>
+
+    <!-- 根据用户信息及查询权限流水号集合 -->
+    <select id="listFunRefcodesByUserInfo" resultType="java.lang.Integer">
+        SELECT FUN.REFCODE FROM CSPA_FUN_M FUN
+        WHERE FUN.USE_FLAG = '1'
+          AND FUN.FUNID IN (
+            SELECT DISTINCT RTF.FUNID FROM SIPA_RTF_M RTF
+            INNER JOIN SIPA_BTR_M BTR ON RTF.ROLEID = BTR.ROLEID
+            WHERE BTR.USERID = #{userid}
+        )
+        ORDER BY FUN.REFCODE DESC
+    </select>
+</mapper>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.vteam.unit.entity.mapper.SipaBurMMapper">
+    <!-- 后台人员用户信息(无密码信息) -->
+    <sql id="operationUserInfo">
+        ${bur}.REFCODE, ${bur}.SYSTEM_TYPE, ${bur}.USERID, ${bur}.LOGIN_ID, ${bur}.USER_NAME, ${bur}.RELEASE_AREA,
+        ${bur}.CHGPWD_FLAG, ${bur}.VALID_DAY, ${bur}.WARNING_DAY, ${bur}.PWD_EXPIRYDATE,
+        ${bur}.CHGPWD_DATE, ${bur}.FULL_NAME, ${bur}.MOBILEPHONE, ${bur}.EMAIL, ${bur}.TEL_AREA,
+        ${bur}.TEL, ${bur}.EXTNO, ${bur}.WEIXIN, ${bur}.WEIXIN_OPEN_ID,
+        ${bur}.AREA_COUNTY, ${bur}.PROVINCE_CODE, ${bur}.ADDRESS, ${bur}.POSTCODE, ${bur}.JOBPOSITION,
+        ${bur}.ID_NO, ${bur}.LAST_LOGIN_ADDRESS, ${bur}.LAST_LOGIN_DATE,
+        ${bur}.BRAND_REFCODE, ${bur}.REGISTER_BRAND_REFCODE, ${bur}.WEB_USER_TYPE,
+        ${bur}.MOBILE_VAILD_STATUS, ${bur}.EMAIL_VAILD_STATUS, ${bur}.REMARK, ${bur}.SOURCE,
+        ${bur}.THEME_STYLE, ${bur}.ADMIN_FLAG, ${bur}.USE_FLAG,
+        ${bur}.DATA_STATUS, ${bur}.ENTITY_ID, ${bur}.DEL_FLAG,
+        ${bur}.CREATE_USER, ${bur}.CREATE_AGENT_USER, ${bur}.CREATE_DATE,
+        ${bur}.EDTID, ${bur}.LAST_MOD_USER, ${bur}.AGENT_USER, ${bur}.LAST_MOD_DATE
+    </sql>
+
+    <!-- 用户角色信息 -->
+    <sql id="btrRoleInfo">
+        SELECT BTR.USERID, BTR.ORG_REFCODE,
+               GROUP_CONCAT(DISTINCT ROL.REFCODE) ROLE_REFCODES,
+               GROUP_CONCAT(DISTINCT ROL.ROLEID) ROLEID, GROUP_CONCAT(DISTINCT ROL.ROLE_NAME) ROLE_NAME
+        FROM SIPA_BTR_M BTR,SIPA_ROL_M ROL
+        WHERE BTR.ROLEID = ROL.ROLEID
+          AND ROL.DEL_FLAG = '0'
+        GROUP BY BTR.USERID, BTR.ORG_REFCODE
+    </sql>
+
+    <!-- 获取运营人员用户列表 -->
+    <select id="listOperationUserByCondition" resultType="com.vteam.unit.entity.vo.SipaBurMVo">
+        SELECT
+        <include refid="operationUserInfo">
+            <property name="bur" value="BUR"/>
+        </include>
+        ,
+        ROL.ROLEID, ROL.ROLE_NAME
+        FROM SIPA_BUR_M BUR
+        LEFT JOIN SIPA_BTR_M BTR ON BTR.USERID=BUR.USERID
+        LEFT JOIN SIPA_ROL_M ROL ON ROL.ROLEID=BTR.ROLEID AND ROL.DEL_FLAG = '0'
+        WHERE BUR.DEL_FLAG = '0'
+        AND BUR.SYSTEM_TYPE = '1'
+        <if test=" null != userid and '' != userid">
+            AND BUR.USERID LIKE CONCAT('%',#{userid},'%')
+        </if>
+        <if test=" null != userName and '' != userName">
+            AND BUR.USER_NAME LIKE CONCAT('%',#{userName},'%')
+        </if>
+        <if test=" null != roleid and '' != roleid">
+            AND ROL.ROLEID = #{roleid}
+        </if>
+        ORDER BY BUR.CREATE_DATE DESC
+    </select>
+
+    <!-- 查询运营人员用户信息 -->
+    <select id="getOperationUserInfo" resultType="com.vteam.unit.entity.vo.SipaBurMVo">
+        SELECT
+        <include refid="operationUserInfo">
+            <property name="bur" value="BUR"/>
+        </include>
+        ,
+        ROL.ROLEID, ROL.ROLE_NAME
+        FROM SIPA_BUR_M BUR
+        LEFT JOIN SIPA_BTR_M BTR ON BTR.USERID = BUR.USERID
+        LEFT JOIN SIPA_ROL_M ROL ON ROL.ROLEID = BTR.ROLEID AND ROL.DEL_FLAG = '0'
+        WHERE BUR.DEL_FLAG = '0'
+        AND BUR.SYSTEM_TYPE = '1'
+        AND BUR.REFCODE = #{refcode}
+    </select>
+
+    <!-- 根据角色及地区获取用户 -->
+    <select id="listUser4Role" resultType="com.vteam.unit.entity.vo.SipaBurMVo">
+        select rol.roleid,bur.* from sipa_rol_m rol
+        left join sipa_btr_m btr on rol.roleid = btr.roleid
+        left join sipa_bur_m bur on btr.userid = bur.userid
+        where 1=1
+        <if test=" null != area and '' != area">
+            AND bur.RELEASE_AREA LIKE CONCAT('%',#{area},'%')
+        </if>
+        <if test=" null != roleid and '' != roleid">
+            AND rol.roleid in
+            <foreach item="id" collection="roleid.split(',')" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+    </select>
+
+    <!-- 按审批流节点流水号获取用户列表 -->
+    <select id="listUserModeUserInfoByFlowNodeRefcode" resultType="com.vteam.unit.entity.vo.SipaBurMVo">
+        SELECT BUR.REFCODE, BUR.USER_NAME, BUR.USERID FROM sipa_bur_m BUR
+        INNER JOIN flow_relation_node_operator REOPR ON REOPR.NODE_REFCODE = #{flowNodeRefcode} AND REOPR.DEL_FLAG = '0'
+        INNER JOIN fbpa_org_m ORG ON ORG.REFCODE = #{orgRefcode}
+        WHERE BUR.USERID = REOPR.USER_ID AND BUR.USE_FLAG = '1' AND BUR.DEL_FLAG = '0'
+    </select>
+
+    <!-- 按审批流节点流水号获取用户列表 -->
+    <select id="listRoleModeUserInfoByFlowNodeRefcode" resultType="com.vteam.unit.entity.vo.SipaBurMVo">
+        SELECT BUR.REFCODE, BUR.USER_NAME, BUR.USERID
+        FROM sipa_bur_m BUR
+        INNER JOIN flow_relation_node_role REROL ON REROL.NODE_REFCODE = #{flowNodeRefcode} AND REROL.DEL_FLAG = '0'
+        INNER JOIN sipa_rol_m ROL ON ROL.ROLEID = REROL.ROLE_ID
+        INNER JOIN sipa_btr_m BTR ON BTR.ROLEID = ROL.ROLEID AND BUR.USERID = BTR.USERID
+        WHERE BUR.USE_FLAG = '1'
+          AND BUR.DEL_FLAG = '0'
+    </select>
+
+
+</mapper>
